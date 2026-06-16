@@ -7,7 +7,7 @@ This is a static read-only viewer for generated Decision Tracker exports.
 - decisions/graph.json
 - decisions/artifacts.json
 
-When built for GitHub Pages with `scripts/build_site.py`, the same viewer reads from:
+When built for GitHub Pages with `dt build-site`, the same viewer reads from:
 
 - data/index.json
 - data/graph.json
