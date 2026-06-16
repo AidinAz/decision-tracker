@@ -1,0 +1,35 @@
+# --- Local env / caches ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.DS_Store
+.env
+.env.*
+
+# --- Generated outputs (never commit) ---
+reports/
+decisions/index.json
+decisions/graph.json
+decisions/artifacts.json
+_site/
+
+# --- Local-only design notes ---
+ARCHITECTURE.md
+DETERMINISM.md
+TREE.md
+NON_GOALS.md
+COMPATIBILITY_NOTES.md
+SPEC.md
+CLI_CONTRACT.md
+DT_DEV_CHECKLIST.md
+
+# Keep README.md, RUNBOOK.md, docs/, fixtures/, and schemas/ tracked.
+
+# --- Archives ---
+*.zip

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "items": {
+    "properties": {
+      "date": {
+        "type": "string"
+      },
+      "id": {
+        "pattern": "^DR-\\d{4}$",
+        "type": "string"
+      },
+      "link_count": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "links": {
+        "items": {
+          "properties": {
+            "artifact_kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "ref": {
+              "type": "string"
+            },
+            "rel": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "artifact_kind",
+            "label",
+            "ref",
+            "rel",
+            "target"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "scores": {
+        "type": "object"
+      },
+      "sections": {
+        "properties": {
+          "Alternatives": {
+            "type": "string"
+          },
+          "Consequences": {
+            "type": "string"
+          },
+          "Context": {
+            "type": "string"
+          },
+          "Decision": {
+            "type": "string"
+          },
+          "Rationale": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Context",
+          "Decision",
+          "Rationale",
+          "Alternatives",
+          "Consequences"
+        ],
+        "type": "object"
+      },
+      "stage": {
+        "type": "string"
+      },
+      "stakeholders": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "status": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "title",
+      "status",
+      "type",
+      "stage",
+      "date",
+      "owner",
+      "stakeholders",
+      "link_count",
+      "links",
+      "sections",
+      "scores"
+    ],
+    "type": "object"
+  },
+  "type": "array"
+}

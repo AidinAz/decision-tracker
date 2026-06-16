@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Decision Tracker Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Decision Tracker</p>
+        <h1>Decision Records</h1>
+      </div>
+      <div class="summary" aria-label="Repository summary">
+        <span id="summary-total">0 decisions</span>
+        <span id="summary-links">0 links</span>
+        <span id="summary-artifacts">0 artifacts</span>
+      </div>
+      <div class="site-links" aria-label="Published artifacts">
+        <span id="site-commit" hidden></span>
+        <a id="report-link" href="" hidden>Report</a>
+        <div class="validation-menu" id="validation-menu" hidden>
+          <button id="validation-toggle" type="button" aria-expanded="false">Validation</button>
+          <div id="validation-popover" class="validation-popover" hidden>
+            <div class="validation-popover-head">
+              <strong>Validation Warnings</strong>
+              <a id="validation-raw-link" href="../reports/validation.txt">Raw file</a>
+            </div>
+            <div id="validation-warnings" class="validation-warnings"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="browser" aria-label="Decision browser">
+        <div class="toolbar">
+          <label>
+            Search
+            <input id="search" type="search" placeholder="ID or title" />
+          </label>
+          <label>
+            Stage
+            <select id="stage-filter"></select>
+          </label>
+          <label>
+            Type
+            <select id="type-filter"></select>
+          </label>
+          <label>
+            Status
+            <select id="status-filter"></select>
+          </label>
+        </div>
+        <div id="decision-list" class="decision-list" aria-live="polite"></div>
+      </section>
+
+      <section class="detail" aria-label="Decision detail">
+        <div id="detail-empty" class="detail-empty">
+          <h2>Select a decision</h2>
+          <p>Choose a record from the list to inspect sections, links, scores, and traceability.</p>
+        </div>
+        <article id="detail-content" hidden></article>
+      </section>
+
+      <section class="graph" aria-label="Traceability graph">
+        <div class="graph-head">
+          <div>
+            <h2>Traceability Graph</h2>
+            <p id="graph-focus">All decision and artifact links</p>
+          </div>
+          <label class="focus-toggle">
+            <input id="focus-selected" type="checkbox" />
+            Focus selected
+          </label>
+        </div>
+        <div class="graph-legend" aria-label="Graph legend">
+          <div>
+            <span class="legend-title">Relationships</span>
+            <span class="legend-item"><span class="rel-swatch rel-implements"></span>implements</span>
+            <span class="legend-item"><span class="rel-swatch rel-supported_by"></span>supported_by</span>
+            <span class="legend-item"><span class="rel-swatch rel-evaluated_by"></span>evaluated_by</span>
+            <span class="legend-item"><span class="rel-swatch rel-supersedes"></span>supersedes</span>
+          </div>
+          <div>
+            <span class="legend-title">Artifacts</span>
+            <span class="legend-item"><span class="kind-swatch kind-code"></span>code</span>
+            <span class="legend-item"><span class="kind-swatch kind-data"></span>data</span>
+            <span class="legend-item"><span class="kind-swatch kind-experiment_run"></span>run</span>
+            <span class="legend-item"><span class="kind-swatch kind-document"></span>document</span>
+            <span class="legend-item"><span class="kind-swatch kind-issue"></span>issue</span>
+          </div>
+        </div>
+        <div id="graph-canvas" class="graph-canvas"></div>
+        <section class="trace-panel" aria-label="Selected decision trace links">
+          <h3>Selected Trace Links</h3>
+          <div id="trace-table" class="trace-table"></div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      window.DT_VIEWER_CONFIG = window.DT_VIEWER_CONFIG || {};
+    </script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

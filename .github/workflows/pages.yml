@@ -1,0 +1,77 @@
+name: Publish viewer
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "decisions/**"
+      - "viewer/**"
+      - "src/**"
+      - "schemas/**"
+      - "scripts/build_site.py"
+      - "pyproject.toml"
+      - "README.md"
+      - "RUNBOOK.md"
+      - "SPEC.md"
+      - "CLI_CONTRACT.md"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "decisions/**"
+      - "viewer/**"
+      - "src/**"
+      - "schemas/**"
+      - "scripts/build_site.py"
+      - "pyproject.toml"
+      - "README.md"
+      - "RUNBOOK.md"
+      - "SPEC.md"
+      - "CLI_CONTRACT.md"
+      - ".github/workflows/pages.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: python -m pip install -e . pytest
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Build static viewer site
+        run: python scripts/build_site.py --root .
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

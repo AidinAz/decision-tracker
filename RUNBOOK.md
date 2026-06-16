@@ -1,0 +1,684 @@
+# Decision Tracker Runbook
+
+## What This Project Is
+
+Decision Tracker is a small CLI-based system for recording important ML workflow decisions as Markdown files in the repository, validating those records against project rules, and generating deterministic exports for reporting and for a read-only viewer.
+
+The project is designed for thesis-style evaluation work where the priorities are:
+
+- low-friction decision capture
+- traceability between decisions and supporting artifacts
+- deterministic, reproducible reporting
+- no external integrations or network dependencies
+
+This is not a workflow platform. It does not manage issues, experiments, or revisions itself. It records references to them.
+
+## Core Idea
+
+Every important decision is stored as a Decision Record in [`decisions/`](decisions/).
+
+A Decision Record:
+
+- has YAML front matter
+- has required Markdown sections
+- can link to evidence and implementation artifacts
+- can supersede older decisions
+
+The CLI reads those records and produces:
+
+- `decisions/index.json`
+- `decisions/graph.json`
+- `decisions/artifacts.json`
+- `reports/metrics.csv`
+- `reports/report.md`
+
+Those outputs are deterministic. If the input records do not change, the generated outputs should not change.
+
+## Repository Map
+
+- [`src/dt/cli.py`](src/dt/cli.py): CLI implementation
+- [`decisions/`](decisions/): current project Decision Records
+- [`docs/`](docs/): supporting notes referenced by records
+- [`fixtures/decisions`](fixtures/decisions): canonical sample Decision Records
+- [`fixtures/expected`](fixtures/expected): golden expected outputs
+- [`tests`](tests): regression and behavior tests
+- [`viewer/`](viewer/): static read-only viewer
+
+## Decision Record Model
+
+Each record is a Markdown file named like:
+
+- `decisions/DR-0001-short-title.md`
+
+Each file must contain:
+
+1. YAML front matter between `---` markers
+2. These required headings exactly once:
+   - `## Context`
+   - `## Decision`
+   - `## Rationale`
+   - `## Alternatives`
+   - `## Consequences`
+
+### Required YAML Fields
+
+- `id`
+- `title`
+- `status`
+- `type`
+- `stage`
+- `date`
+- `owner`
+- `stakeholders`
+- `template_version`
+- `links`
+
+### Frozen Enums
+
+`status`
+
+- `proposed`
+- `accepted`
+- `rejected`
+- `superseded`
+- `deprecated`
+
+`type`
+
+- `generic`
+- `model`
+- `evaluation_protocol`
+
+`stage`
+
+- `data`
+- `training`
+- `evaluation`
+- `deployment`
+- `monitoring`
+
+`rel`
+
+- `implements`
+- `evaluated_by`
+- `supported_by`
+- `supersedes`
+
+`artifact_kind`
+
+- `code`
+- `data`
+- `experiment_run`
+- `document`
+- `issue`
+
+## Templates
+
+There are three decision types.
+
+### `generic`
+
+Use this for decisions that do not need a specialized schema.
+
+Requires:
+
+- base YAML fields
+- required headings
+
+### `model`
+
+Use this for model-selection or model-definition decisions.
+
+Requires `model_spec`:
+
+```yaml
+model_spec:
+  objective: "Text classification"
+  model_family: "Transformer encoder"
+  input: "Tokenized text"
+  output: "Class label"
+  primary_metric: "F1"
+  acceptance_criteria: "F1 >= 0.75 on fixed eval protocol"
+```
+
+Optionally, a model record can also capture training and hyperparameter decisions:
+
+```yaml
+model_spec:
+  training_config:
+    tuning_method: "random_search"
+    search_space:
+      learning_rate: "1e-5, 3e-5, 5e-5"
+      batch_size: "16, 32"
+      weight_decay: "0.0, 0.01"
+    selected_hyperparameters:
+      learning_rate: "3e-5"
+      batch_size: "16"
+      weight_decay: "0.01"
+    stopping_rule: "Early stopping on validation F1 with patience 3"
+    selection_rule: "Choose highest validation F1, then confirm once on held-out test"
+    compute_environment: "Single GPU, fixed seed"
+```
+
+Use `training_config` when the decision is about how the model is trained, not only what model family is selected. The block is optional, but if you include it, `tuning_method`, `selected_hyperparameters`, and `selection_rule` must be filled.
+
+`search_space` values are intentionally flexible. A hyperparameter can be documented as a string, a YAML list, or a nested object depending on what is clearest for the tuning method.
+
+When the record is not `proposed`, it must also have:
+
+- one `implements` link to `code`
+- one `supported_by` link to `document` or `issue`
+
+### `evaluation_protocol`
+
+Use this for evaluation methodology decisions.
+
+Requires `eval_spec`:
+
+```yaml
+eval_spec:
+  dataset_ref: "dvc:3f2c9a1"
+  protocol: "Stratified 70/30 split, seed=42"
+  metrics:
+    - name: "F1"
+      threshold: ">= 0.75"
+  baseline:
+    ref: "decision:DR-0001"
+    description: "Previous informal eval approach"
+```
+
+When the record is not `proposed`, it must also have:
+
+- one `evaluated_by` link to `experiment_run` or `document`
+- one dataset link with `artifact_kind: data` and `rel: supported_by` or `evaluated_by`
+
+## Link Semantics
+
+Links create the traceability graph.
+
+Examples:
+
+- `implements`: the decision is implemented by code or a commit
+- `evaluated_by`: the decision is evaluated by an experiment run or report
+- `supported_by`: the decision is supported by documentation, notes, issues, or dataset evidence
+- `supersedes`: the new decision replaces an older decision
+
+Decision-to-decision links use `ref: decision:DR-XXXX`. The tool infers that target as a decision node automatically.
+
+## Allowed Reference Formats
+
+Examples of valid refs:
+
+- `git:commit:bb22cc3`
+- `git:ref:main`
+- `github:pr:14`
+- `github:issue:52`
+- `url:https://example.com/report`
+- `dvc:3f2c9a1`
+- `checksum:sha256:abc123`
+- `data:version:2026-03-14`
+- `mlflow:run:f3a0b0d1b2c34e`
+- `wandb:run:abc123`
+- `run:offline-eval-01`
+- `path:docs/model-selection-notes.md`
+- `decision:DR-0004`
+
+The CLI validates refs syntactically. For `git:commit:<sha>` refs, validation also checks whether the commit exists in the local Git repository when the command is run inside one. This is warning-only and does not fetch from remotes.
+
+## Commands
+
+You can use the project in two ways.
+
+If `dt` is installed as a console script:
+
+```bash
+dt new --title "Adopt Transformer encoder as baseline model" --stage training --type model --owner ahmet
+dt validate --all
+dt report
+```
+
+If you are working directly from source without installation:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli new --title "Adopt Transformer encoder as baseline model" --stage training --type model --owner ahmet
+PYTHONPATH=src python3 -m dt.cli validate --all
+PYTHONPATH=src python3 -m dt.cli report
+```
+
+All commands accept `--root PATH`. If you omit it, the CLI walks upward from the current directory and uses the first directory containing `decisions/` or `.git`. This means you can run `dt validate --all` or `dt report` from a subdirectory of the repository.
+
+To link a new record to the current Git commit, add `--git-head`:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli new \
+  --title "Record current implementation decision" \
+  --stage training \
+  --type generic \
+  --owner ahmet \
+  --git-head
+```
+
+This writes a literal `git:commit:<sha>` link. It does not store `git:HEAD`, because `HEAD` changes over time and would make generated exports ambiguous.
+
+### `dt new`
+
+Creates a new Decision Record with the next available `DR-XXXX` id.
+
+Example:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli new \
+  --title "Switch evaluation to stratified 70/30 split" \
+  --stage evaluation \
+  --type evaluation_protocol \
+  --owner ahmet \
+  --stakeholders "ML engineer,reviewer"
+```
+
+Result:
+
+- creates a new file under `decisions/`
+- fills in the correct template scaffold
+- optionally adds the current Git commit as an `implements` code link when `--git-head` is used
+- prints `Created decisions/DR-XXXX-...`
+
+### `dt validate`
+
+Validates one record or the full repository.
+
+Examples:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli validate --all
+PYTHONPATH=src python3 -m dt.cli validate --id DR-0003
+```
+
+Possible output:
+
+```text
+OK DR-0003
+FAIL DR-0007: TEMPLATE_FIELD_MISSING: model_spec.primary_metric must be a non-empty string
+WARN DR-0008: DECISION_REF_NON_SUPERSEDES: links[1] references a decision with rel=supported_by
+```
+
+Exit codes:
+
+- `0`: all selected records passed
+- `3`: validation failures
+- `2`: filesystem error such as missing `/decisions`
+
+### `dt report`
+
+Builds the deterministic exports and metrics files.
+
+Example:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli report
+```
+
+Writes:
+
+- `decisions/index.json`
+- `decisions/graph.json`
+- `decisions/artifacts.json`
+- `reports/metrics.csv`
+- `reports/report.md`
+
+If validation errors are found, `dt report` prints the failures and exits before writing generated outputs. This prevents invalid records from producing misleading metrics.
+
+## Typical Workflow
+
+### Scenario 1: Adding a New Model Decision
+
+You decide to adopt a new architecture for an ML baseline.
+
+1. Create a record:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli new \
+  --title "Adopt Transformer encoder as baseline model" \
+  --stage training \
+  --type model \
+  --owner ahmet \
+  --stakeholders "ML engineer,supervisor"
+```
+
+2. Fill in:
+   - `model_spec`
+   - optional `model_spec.training_config` if the decision includes fine-tuning or hyperparameter choices
+   - the required sections
+   - one supporting document or issue link
+   - one implementation code link
+
+3. Validate:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli validate --id DR-0002
+```
+
+4. Generate reports:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli report
+```
+
+### Scenario 2: Recording an Evaluation Protocol
+
+You standardize evaluation around a fixed split and metric threshold.
+
+The record should include:
+
+- `eval_spec.dataset_ref`
+- `eval_spec.protocol`
+- at least one metric and threshold
+- baseline reference and description
+- dataset evidence link
+- evaluation evidence link
+
+Good example:
+
+```yaml
+type: evaluation_protocol
+eval_spec:
+  dataset_ref: "dvc:3f2c9a1"
+  protocol: "Stratified 70/30 split, seed=42"
+  metrics:
+    - name: "F1"
+      threshold: ">= 0.75"
+  baseline:
+    ref: "decision:DR-0001"
+    description: "Previous informal eval approach"
+links:
+  - id: "L-0001"
+    rel: supported_by
+    artifact_kind: data
+    ref: "dvc:3f2c9a1"
+  - id: "L-0002"
+    rel: evaluated_by
+    artifact_kind: experiment_run
+    ref: "mlflow:run:f3a0b0d1b2c34e"
+```
+
+If the record is `accepted` and one of those trace links is missing, validation should fail.
+
+### Scenario 3: Proposing a Change Without Evidence Yet
+
+You want to propose a new threshold but do not yet have supporting artifacts.
+
+This is allowed if the status is `proposed`.
+
+Example:
+
+```yaml
+status: proposed
+type: evaluation_protocol
+links: []
+```
+
+That record can still pass validation if the template fields and required sections are present.
+
+### Scenario 4: Replacing an Older Decision
+
+You want to supersede `DR-0004`.
+
+In the new record:
+
+```yaml
+links:
+  - id: "L-0001"
+    rel: supersedes
+    artifact_kind: document
+    ref: "decision:DR-0004"
+```
+
+If `DR-0004` has `status: superseded`, validation expects that some other record points to it with a `supersedes` link. If not, `SUPERSEDED_INCONSISTENT` is raised.
+
+## Understanding the Outputs
+
+### `decisions/index.json`
+
+A summary list of decisions with metadata and scores.
+
+Use it for:
+
+- list views
+- filtering by status/type/stage
+- quick decision inventory
+- detail views with rendered Decision Record sections and grouped links
+
+### `decisions/graph.json`
+
+A graph export containing:
+
+- nodes
+- typed edges
+
+Decision node ids look like:
+
+- `decision:DR-0005`
+
+Artifact node ids look like:
+
+- `artifact:<sha256(ref)>`
+
+This keeps node ids deterministic while preserving the original `ref` elsewhere.
+
+### `decisions/artifacts.json`
+
+A deduplicated artifact index.
+
+Use it to:
+
+- inspect all referenced external artifacts
+- connect hashed graph node ids back to original refs
+
+### `reports/metrics.csv`
+
+A deterministic tabular export of counts, booleans, and quality scores.
+
+Key score ideas:
+
+- `score_completeness`: structure and required content
+- `score_connectedness`: number and variety of links
+- `score_inclusiveness`: stakeholder coverage
+- `score_traceability`: gated by template-specific minimum trace links
+
+### `reports/report.md`
+
+A compact human-readable summary with:
+
+- counts
+- average scores
+- simple smell indicators
+
+## Common Validation Failures
+
+### `ID_FORMAT_INVALID`
+
+Cause:
+
+- `id` is not `DR-XXXX`
+
+Bad:
+
+```yaml
+id: DR-7
+```
+
+Good:
+
+```yaml
+id: DR-0007
+```
+
+### `TEMPLATE_FIELD_MISSING`
+
+Cause:
+
+- a `model` or `evaluation_protocol` record is missing required template fields
+
+Example:
+
+```text
+FAIL DR-0007: TEMPLATE_FIELD_MISSING: model_spec.primary_metric must be a non-empty string
+```
+
+### `LINK_INVALID_FORMAT`
+
+Cause:
+
+- a link ref does not match any allowed pattern
+
+Bad:
+
+```yaml
+ref: "my-custom-reference"
+```
+
+Good:
+
+```yaml
+ref: "path:docs/model-selection-notes.md"
+```
+
+### `STAKEHOLDER_DUPLICATE`
+
+Cause:
+
+- the same stakeholder appears more than once, case-insensitively
+
+This is a warning, not a failure. The metrics still deduplicate stakeholders.
+
+### `HEADING_DUPLICATE`
+
+Cause:
+
+- one required heading appears more than once
+
+### `SECTION_EMPTY`
+
+Cause:
+
+- a required section such as `Rationale` is blank
+
+### `MIN_LINKS_NOT_MET`
+
+Cause:
+
+- a non-proposed record does not satisfy template-specific traceability minima
+
+### `SUPERSEDED_INCONSISTENT`
+
+Cause:
+
+- a record is marked `superseded` but no other record points to it via `rel: supersedes`
+
+## How Determinism Is Preserved
+
+The generated outputs are intentionally stable.
+
+The implementation enforces:
+
+- sorting decisions by id
+- sorting links by `(rel, artifact_kind, ref, label)`
+- canonical JSON formatting
+- newline at EOF
+- stable CSV headers and row ordering
+- 3-decimal score rounding with decimal `ROUND_HALF_UP` semantics
+
+This matters because the project includes golden fixtures in [`fixtures/expected`](fixtures/expected), and the tests compare outputs byte-for-byte.
+
+## How to Verify the Project
+
+Run the test suite:
+
+```bash
+python3 -m pytest -q
+```
+
+Validate fixture decisions:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli validate --all
+```
+
+Generate reports:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli report
+```
+
+Compare generated outputs to expected fixtures if needed:
+
+```bash
+diff -u fixtures/expected/index.json decisions/index.json
+diff -u fixtures/expected/graph.json decisions/graph.json
+diff -u fixtures/expected/artifacts.json decisions/artifacts.json
+diff -u fixtures/expected/metrics.csv reports/metrics.csv
+diff -u fixtures/expected/report.md reports/report.md
+```
+
+## How to Use the Viewer
+
+The viewer is a static read-only app in [`viewer/`](viewer/). It loads the generated JSON exports and provides:
+
+- a filterable decision list
+- a detail view with Decision Record sections
+- grouped links by relationship type
+- a traceability graph
+
+Generate exports and serve the repository root:
+
+```bash
+PYTHONPATH=src python3 -m dt.cli report
+python3 -m http.server 8000
+```
+
+Open:
+
+```text
+http://localhost:8000/viewer/
+```
+
+## How Static Publishing Works
+
+The repository can build a clean static site artifact for GitHub Pages:
+
+```bash
+PYTHONPATH=src python3 scripts/build_site.py --root .
+```
+
+This command:
+
+- runs `dt validate --all`
+- stops if validation has failures
+- preserves validation warnings in `_site/data/validation.txt`
+- runs `dt report`
+- copies the viewer into `_site/`
+- copies generated JSON, `report.md`, `metrics.csv`, and `site-meta.json` into `_site/data/`
+- generates `_site/report.html` as a printable executive summary and audit report over the generated data
+
+The published viewer loads from `_site/data/` instead of `decisions/`, so the public site does not need to expose the whole repository.
+
+The GitHub Actions workflow builds the site for pull requests without deploying. Pushes to `main` build the same artifact and deploy it to GitHub Pages.
+
+## Practical Advice for New Contributors
+
+- Read the existing tests and fixture outputs before changing behavior.
+- Do not casually add fields, enums, or output columns.
+- Do not change export formatting unless the behavior change is intentional and covered by tests.
+- When in doubt, inspect the fixture decisions first. They are the best working examples.
+- If behavior changes, update tests and only update golden outputs when the new behavior is intentional.
+
+## Quick Start
+
+If you want the shortest usable path:
+
+1. Create a decision with `dt new` or `PYTHONPATH=src python3 -m dt.cli new`
+2. Fill in the generated file under `decisions/`
+3. Run `validate`
+4. Run `report`
+5. Inspect `reports/report.md` and the JSON exports
+
+That is the core loop of the project.

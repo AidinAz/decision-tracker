@@ -1,0 +1,50 @@
+[
+  {
+    "artifact_kind": "experiment_run",
+    "id": "artifact:2f67da8bda404b8f74a79c78da749a538cd8d31d844f5eac6a9bf5f55c24007c",
+    "label": "Run evaluating stratified split",
+    "ref": "mlflow:run:f3a0b0d1b2c34e"
+  },
+  {
+    "artifact_kind": "data",
+    "id": "artifact:671ef6c0076d7a8822952826e3f5d6ad6a876db13e5f8dd4152156f71a34e172",
+    "label": "Dataset version used",
+    "ref": "dvc:3f2c9a1"
+  },
+  {
+    "artifact_kind": "code",
+    "id": "artifact:8630b895310f653cb8d1eb161eed7bc778c9a3e82888c24dd06b812dc197f507",
+    "label": "Implements stratified split",
+    "ref": "git:commit:cc11dd2"
+  },
+  {
+    "artifact_kind": "document",
+    "id": "artifact:a58020d0da7d6079ff30fd5a52c9f80465098a241e086da746dad08d1dacdac7",
+    "label": "Template guidance",
+    "ref": "path:docs/template-guidance.md"
+  },
+  {
+    "artifact_kind": "code",
+    "id": "artifact:abf7fdef7990fe095557154da35bf05fe7b0d4b4f43a275da4de190a188e7bf0",
+    "label": "Adds transformer model module",
+    "ref": "git:commit:bb22cc3"
+  },
+  {
+    "artifact_kind": "document",
+    "id": "artifact:bf1114203ff06de9010e5da12e1df6bb3a60049b0aa6ecea9913cd37d3592da2",
+    "label": "Dataset versioning notes",
+    "ref": "path:docs/dataset-versioning-notes.md"
+  },
+  {
+    "artifact_kind": "document",
+    "id": "artifact:c77f134f4b5b4464075e5543173c6f17845efd0a3be515bafe665362cd79d91b",
+    "label": "Rationale doc",
+    "ref": "path:docs/decision-tracking-rationale.md"
+  },
+  {
+    "artifact_kind": "document",
+    "id": "artifact:e55c39e4bbb617b3a9d270f18effdb8011728591de3f0937dc6b1fbd3a3b6439",
+    "label": "Model selection notes",
+    "ref": "path:docs/model-selection-notes.md"
+  }
+]
