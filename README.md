@@ -233,6 +233,7 @@ PYTHONPATH=src python3 -m dt.cli report
 ## Important Documents
 
 - [RUNBOOK.md](RUNBOOK.md): detailed user guide
+- [ARCHITECTURE.md](ARCHITECTURE.md): system architecture, command flow, data model, publishing flow, and backfill/discover diagrams
 - [docs/user-scenarios.md](docs/user-scenarios.md): use cases and Mermaid diagrams
 - [docs/](docs/): supporting notes linked from Decision Records
 - [fixtures/decisions](fixtures/decisions): sample records used by tests

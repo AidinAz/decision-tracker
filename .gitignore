@@ -21,7 +21,6 @@ decisions/artifacts.json
 _site/
 
 # --- Local-only design notes ---
-ARCHITECTURE.md
 DETERMINISM.md
 TREE.md
 NON_GOALS.md
