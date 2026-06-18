@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _prepare_site_workdir(tmp_path: Path) -> Path:
     repo = Path(__file__).resolve().parents[1]
@@ -59,6 +61,54 @@ def test_build_site_creates_clean_static_artifact(tmp_path: Path):
     assert sorted(meta) == ["generated_from_commit", "source_branch"]
 
 
+def test_build_site_report_surfaces_reconstructed_records(tmp_path: Path):
+    work = _prepare_site_workdir(tmp_path)
+    backfilled = work / "decisions" / "DR-0007-backfilled-threshold.md"
+    backfilled.write_text(
+        "---\n"
+        "id: DR-0007\n"
+        "title: Backfilled threshold\n"
+        "status: proposed\n"
+        "type: generic\n"
+        "stage: monitoring\n"
+        "date: '2026-03-14'\n"
+        "owner: ahmet\n"
+        "stakeholders: [reviewer]\n"
+        "template_version: '1.0'\n"
+        "links:\n"
+        "  - id: L-0001\n"
+        "    rel: supported_by\n"
+        "    artifact_kind: document\n"
+        "    ref: path:docs/notes.md\n"
+        "reconstruction:\n"
+        "  mode: backfill\n"
+        "  original_decision_date: unknown\n"
+        "  evidence_confidence: medium\n"
+        "  evidence_sources:\n"
+        "    - path:docs/notes.md\n"
+        "  known_gaps:\n"
+        "    - Original meeting notes unavailable\n"
+        "---\n"
+        "\n"
+        "## Context\nx\n\n## Decision\nx\n\n## Rationale\nx\n\n## Alternatives\nx\n\n## Consequences\nx\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    report_html = (work / "_site" / "report.html").read_text(encoding="utf-8")
+    app_js = (work / "_site" / "app.js").read_text(encoding="utf-8")
+    assert "Reconstructed Records" in report_html
+    assert "Backfilled threshold" in report_html
+    assert "reconstruction-panel" in app_js
+    assert "reconstructed" in app_js
+
+
 def test_build_site_refuses_unknown_non_empty_site_dir(tmp_path: Path):
     work = _prepare_site_workdir(tmp_path)
     site = tmp_path / "victim"
@@ -75,6 +125,27 @@ def test_build_site_refuses_unknown_non_empty_site_dir(tmp_path: Path):
     assert result.returncode == 2
     assert "FAIL SITE_DIR_NOT_EMPTY" in result.stderr
     assert protected.exists()
+
+
+def test_build_site_refuses_symlink_site_dir_without_force(tmp_path: Path):
+    work = _prepare_site_workdir(tmp_path)
+    target = tmp_path / "target"
+    target.mkdir()
+    link = tmp_path / "site-link"
+    try:
+        link.symlink_to(target, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is not supported")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work), "--site-dir", str(link)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "FAIL SITE_DIR_UNSAFE" in result.stderr
+    assert link.is_symlink()
 
 
 def test_build_site_force_replaces_unknown_non_empty_site_dir(tmp_path: Path):
@@ -153,6 +224,29 @@ def test_build_site_requires_viewer_config_placeholder(tmp_path: Path):
 
     assert result.returncode != 0
     assert "DT_VIEWER_CONFIG placeholder" in result.stderr
+
+
+def test_build_site_reports_io_errors_without_traceback(tmp_path: Path):
+    work = _prepare_site_workdir(tmp_path)
+    missing_viewer = tmp_path / "missing-viewer"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dt.site",
+            "--root",
+            str(work),
+            "--viewer-dir",
+            str(missing_viewer),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "FAIL BUILD_SITE_IO_ERROR" in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_build_site_command_uses_packaged_assets(tmp_path: Path):

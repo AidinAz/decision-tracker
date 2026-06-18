@@ -33,7 +33,7 @@ def init_command(root: Optional[Path], force: bool) -> None:
 
 def build_site_command_handler(root: Optional[Path], site_dir: Optional[Path], force: bool) -> None:
     resolved_root = _resolve_root(root)
-    resolved_site_dir = site_dir.resolve() if site_dir else resolved_root / "_site"
+    resolved_site_dir = site_dir.absolute() if site_dir else resolved_root / "_site"
     build_static_site(resolved_root, resolved_site_dir, force=force)
 
 

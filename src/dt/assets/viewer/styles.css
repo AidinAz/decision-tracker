@@ -586,6 +586,12 @@ h1 {
   color: #7a352e;
 }
 
+.reconstruction-pill {
+  border-color: rgba(155, 77, 47, 0.42);
+  background: rgba(155, 77, 47, 0.1);
+  color: var(--accent-2);
+}
+
 .empty {
   display: grid;
   min-height: 560px;
@@ -619,6 +625,61 @@ h1 {
   gap: 12px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--line);
+}
+
+.reconstruction-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border: 1px solid rgba(155, 77, 47, 0.28);
+  border-radius: 10px;
+  background: rgba(155, 77, 47, 0.07);
+  padding: 16px;
+}
+
+.reconstruction-panel h3 {
+  font: 900 13px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reconstruction-panel p,
+.reconstruction-panel li {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font: 600 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+}
+
+.reconstruction-panel dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.reconstruction-panel dl div {
+  border: 1px solid rgba(218, 213, 200, 0.8);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 10px;
+}
+
+.reconstruction-panel dt {
+  color: var(--muted);
+  font: 800 10px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reconstruction-panel dd {
+  margin: 5px 0 0;
+  color: var(--ink);
+  font: 900 13px/1.25 ui-sans-serif, system-ui, sans-serif;
+}
+
+.reconstruction-panel ul {
+  margin: 0;
+  padding-left: 18px;
 }
 
 .detail-header h2 {
@@ -974,6 +1035,10 @@ h1 {
   }
 
   .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .reconstruction-panel dl {
     grid-template-columns: 1fr;
   }
 

@@ -117,6 +117,36 @@ function linksForDecision(decision) {
     }));
 }
 
+function reconstructionPill(decision) {
+  return decision.reconstruction ? `<span class="pill reconstruction-pill">reconstructed</span>` : "";
+}
+
+function renderReconstructionPanel(decision) {
+  const reconstruction = decision.reconstruction;
+  if (!reconstruction) return "";
+  const evidenceSources = Array.isArray(reconstruction.evidence_sources) ? reconstruction.evidence_sources : [];
+  const knownGaps = Array.isArray(reconstruction.known_gaps) ? reconstruction.known_gaps : [];
+  return `
+    <section class="reconstruction-panel">
+      <div>
+        <h3>Reconstruction</h3>
+        <p>This record was backfilled from historical evidence and should remain proposed until reviewed.</p>
+      </div>
+      <dl>
+        <div><dt>Original date</dt><dd>${escapeHtml(reconstruction.original_decision_date || "unknown")}</dd></div>
+        <div><dt>Confidence</dt><dd>${escapeHtml(reconstruction.evidence_confidence || "unknown")}</dd></div>
+        <div><dt>Evidence sources</dt><dd>${evidenceSources.length}</dd></div>
+        <div><dt>Known gaps</dt><dd>${knownGaps.length}</dd></div>
+      </dl>
+      ${
+        knownGaps.length
+          ? `<ul>${knownGaps.map((gap) => `<li>${escapeHtml(gap)}</li>`).join("")}</ul>`
+          : `<p>No known gaps recorded.</p>`
+      }
+    </section>
+  `;
+}
+
 function filteredDecisions() {
   const query = els.search.value.trim().toLowerCase();
   const stage = els.stageFilter.value;
@@ -162,6 +192,7 @@ function renderList() {
             <span class="pill status-${escapeHtml(decision.status)}">${escapeHtml(decision.status)}</span>
             <span class="pill">${escapeHtml(decision.type)}</span>
             <span class="pill">${escapeHtml(decision.stage)}</span>
+            ${reconstructionPill(decision)}
             <span class="pill">${decision.link_count} links</span>
           </span>
           <span class="score-row">
@@ -199,11 +230,13 @@ function renderDetail(decision) {
         <span class="pill">${escapeHtml(decision.stage)}</span>
         <span class="pill">${escapeHtml(decision.date)}</span>
         <span class="pill">owner: ${escapeHtml(decision.owner)}</span>
+        ${reconstructionPill(decision)}
       </div>
       <div class="meta-row">
         ${decision.stakeholders.map((item) => `<span class="pill">${escapeHtml(item)}</span>`).join("")}
       </div>
     </header>
+    ${renderReconstructionPanel(decision)}
     <div class="section-stack">
       ${sectionOrder
         .map(
