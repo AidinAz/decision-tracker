@@ -46,6 +46,44 @@
       "owner": {
         "type": "string"
       },
+      "reconstruction": {
+        "properties": {
+          "evidence_confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "type": "string"
+          },
+          "evidence_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "known_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "mode": {
+            "const": "backfill"
+          },
+          "original_decision_date": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "original_decision_date",
+          "evidence_confidence",
+          "evidence_sources",
+          "known_gaps"
+        ],
+        "type": "object"
+      },
       "scores": {
         "type": "object"
       },
