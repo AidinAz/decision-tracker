@@ -15,7 +15,8 @@ from typing import Optional
 
 
 VIEWER_CONFIG_PLACEHOLDER = "<script>\n      window.DT_VIEWER_CONFIG = window.DT_VIEWER_CONFIG || {};\n    </script>"
-SITE_MARKER = ".decision-tracker-site"
+SITE_MARKER = "__DT_SITE__"
+LEGACY_SITE_MARKER = ".decision-tracker-site"
 
 
 def _run(command: list[str], root: Path) -> subprocess.CompletedProcess[str]:
@@ -337,9 +338,27 @@ def _is_safe_existing_site_dir(site_dir: Path) -> bool:
         return False
     if not any(site_dir.iterdir()):
         return True
-    if (site_dir / SITE_MARKER).exists():
+    if (site_dir / SITE_MARKER).exists() or (site_dir / LEGACY_SITE_MARKER).exists():
         return True
     return site_dir.name == "_site" and (site_dir / "index.html").exists() and (site_dir / "data").is_dir()
+
+
+def _preflight_site_output(site_dir: Path, force: bool) -> None:
+    if site_dir.is_symlink() and not force:
+        return
+    if site_dir.exists():
+        probe_dir = site_dir if site_dir.is_dir() else site_dir.parent
+    else:
+        probe_dir = site_dir.parent
+        while not probe_dir.exists() and probe_dir != probe_dir.parent:
+            probe_dir = probe_dir.parent
+    probe = probe_dir / ".dt-write-test"
+    try:
+        probe_dir.mkdir(parents=True, exist_ok=True)
+        probe.write_text("ok\n", encoding="utf-8")
+        probe.unlink()
+    except OSError as exc:
+        raise OSError(f"Cannot write site output at {site_dir}: {exc}") from exc
 
 
 def _guard_site_dir(root: Path, site_dir: Path, force: bool) -> None:
@@ -361,6 +380,7 @@ def _guard_site_dir(root: Path, site_dir: Path, force: bool) -> None:
             f"like a Decision Tracker site: {site_dir}. Re-run with --force to replace it.\n"
         )
         raise SystemExit(2)
+    _preflight_site_output(site_dir, force)
 
 
 def build_site(root: Path, site_dir: Path, viewer_dir: Optional[Path] = None, force: bool = False) -> None:

@@ -32,7 +32,7 @@ def test_build_site_creates_clean_static_artifact(tmp_path: Path):
     site = work / "_site"
     data = site / "data"
     for path in [
-        site / ".decision-tracker-site",
+        site / "__DT_SITE__",
         site / "index.html",
         site / "report.html",
         site / "app.js",
@@ -46,6 +46,7 @@ def test_build_site_creates_clean_static_artifact(tmp_path: Path):
         data / "site-meta.json",
     ]:
         assert path.exists(), f"Missing site artifact: {path}"
+    assert not (site / ".decision-tracker-site").exists()
 
     assert not (site / "decisions").exists()
     assert 'dataBase: "data"' in (site / "index.html").read_text(encoding="utf-8")
@@ -173,7 +174,7 @@ def test_build_site_force_replaces_unknown_non_empty_site_dir(tmp_path: Path):
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert not protected.exists()
-    assert (site / ".decision-tracker-site").exists()
+    assert (site / "__DT_SITE__").exists()
     assert (site / "index.html").exists()
 
 
@@ -247,6 +248,25 @@ def test_build_site_reports_io_errors_without_traceback(tmp_path: Path):
     assert result.returncode == 2
     assert "FAIL BUILD_SITE_IO_ERROR" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+def test_build_site_preflights_site_output_before_report(tmp_path: Path):
+    work = _prepare_site_workdir(tmp_path)
+    original_index = work / "decisions" / "index.json"
+    original_index.write_text("stale\n", encoding="utf-8")
+    blocking_file = tmp_path / "not-a-directory"
+    blocking_file.write_text("nope\n", encoding="utf-8")
+    site_dir = blocking_file / "site"
+
+    result = subprocess.run(
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work), "--site-dir", str(site_dir)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "FAIL BUILD_SITE_IO_ERROR" in result.stderr
+    assert original_index.read_text(encoding="utf-8") == "stale\n"
 
 
 def test_build_site_command_uses_packaged_assets(tmp_path: Path):

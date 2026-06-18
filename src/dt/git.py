@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,13 @@ from dt.models import DiscoverCandidate
 
 class GitLogError(RuntimeError):
     """Raised when discover cannot inspect local Git history."""
+
+
+def _keyword_matches(message: str, keywords: list[str]) -> bool:
+    for keyword in keywords:
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(keyword)}(?![A-Za-z0-9])", message):
+            return True
+    return False
 
 
 def _git_repo_root(root: Path) -> Optional[Path]:
@@ -103,7 +111,7 @@ def _git_log_candidates(root: Path, keywords: list[str], since: Optional[str], l
             continue
         sha, subject = line.split("\t", 1)
         subject_lower = subject.lower()
-        if not any(keyword in subject_lower for keyword in normalized_keywords):
+        if not _keyword_matches(subject_lower, normalized_keywords):
             continue
         candidates.append(
             DiscoverCandidate(

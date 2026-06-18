@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import typer
@@ -56,10 +57,21 @@ def _write_gitignore(path: Path, changes: ScaffoldChanges) -> None:
         return
 
     original = path.read_text(encoding="utf-8")
-    if GITIGNORE_START in original and GITIGNORE_END in original:
+    has_start = GITIGNORE_START in original
+    has_end = GITIGNORE_END in original
+    if has_start and has_end:
         start = original.index(GITIGNORE_START)
         end = original.index(GITIGNORE_END, start) + len(GITIGNORE_END)
         updated = original[:start] + GITIGNORE_BLOCK.rstrip("\n") + original[end:]
+        if not updated.endswith("\n"):
+            updated += "\n"
+    elif has_start or has_end:
+        pattern = (
+            rf"(?ms)^{re.escape(GITIGNORE_START)}.*$"
+            if has_start
+            else rf"(?ms)^.*{re.escape(GITIGNORE_END)}.*$"
+        )
+        updated = re.sub(pattern, GITIGNORE_BLOCK.rstrip("\n"), original, count=1)
         if not updated.endswith("\n"):
             updated += "\n"
     else:

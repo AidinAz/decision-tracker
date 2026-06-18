@@ -59,6 +59,23 @@ def test_init_appends_gitignore_block_idempotently(tmp_path: Path):
     assert "Updated .gitignore" not in second.output
 
 
+def test_init_repairs_partial_gitignore_marker_block(tmp_path: Path):
+    runner = CliRunner()
+    gitignore = tmp_path / ".gitignore"
+    gitignore.write_text("*.log\n# >>> Decision Tracker generated outputs >>>\nbroken\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["init", "--root", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    text = gitignore.read_text(encoding="utf-8")
+    assert "*.log" in text
+    assert "broken" not in text
+    assert text.count("# >>> Decision Tracker generated outputs >>>") == 1
+    assert text.count("# <<< Decision Tracker generated outputs <<<") == 1
+    assert "_site/" in text
+    assert "Updated .gitignore" in result.output
+
+
 def test_init_force_overwrites_scaffolded_files(tmp_path: Path):
     runner = CliRunner()
     workflow = tmp_path / ".github" / "workflows" / "pages.yml"

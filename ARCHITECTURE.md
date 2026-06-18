@@ -208,11 +208,14 @@ sequenceDiagram
   CLI-->>U: Generated reports and exports
 
   U->>CLI: dt build-site
+  CLI->>Site: preflight output safety and writability
   CLI->>CLI: validate + report
   CLI->>Viewer: load packaged app.js/styles.css/index.html
   CLI->>Site: write static viewer and data/
   CLI-->>U: Built static viewer site at _site
 ```
+
+`dt build-site` intentionally runs validation and report generation before copying viewer assets, because the published site should reflect the same validated exports as local reporting. Before those steps, it checks that the requested site output path is safe and writable. It refuses to replace the project root, ancestors of the project root, unknown non-empty directories, and symlinked output paths unless `--force` is explicitly used.
 
 ## GitHub Pages Publishing Sequence
 
@@ -267,3 +270,5 @@ flowchart TB
   Markdown --> BuildSite
   BuildSite --> Static["_site/"]
 ```
+
+`_site/` includes a non-dot marker file named `__DT_SITE__`. The marker lets later builds recognize the directory as generated and safe to replace without publishing a hidden dotfile through GitHub Pages.

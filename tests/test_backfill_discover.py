@@ -66,6 +66,21 @@ def test_discover_prints_no_candidates_when_git_scan_succeeds(tmp_path: Path):
     assert "No candidate decision evidence found." in result.stdout
 
 
+def test_discover_keywords_match_words_not_substrings(tmp_path: Path):
+    work = tmp_path / "repo"
+    work.mkdir()
+    _run_git_or_skip(["--version"], work)
+    _run_git_or_skip(["init"], work)
+    _run_git_or_skip(["config", "user.email", "test@example.com"], work)
+    _run_git_or_skip(["config", "user.name", "Test User"], work)
+    _commit_file(work, "notes.txt", "notes\n", "Pinpoint flaky test", "2026-01-01T00:00:00+0000")
+
+    result = _run(["dt", "discover", "--root", str(work), "--keywords", "pin"], work)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "No candidate decision evidence found." in result.stdout
+
+
 def test_discover_finds_git_commit_candidates_and_respects_limit_since_keywords(tmp_path: Path):
     work = tmp_path / "repo"
     work.mkdir()
