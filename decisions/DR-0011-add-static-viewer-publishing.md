@@ -12,14 +12,14 @@ links:
   - id: "L-0001"
     rel: supported_by
     artifact_kind: document
-    ref: "path:viewer/README.md"
-    label: "Viewer publishing notes"
+    ref: "path:RUNBOOK.md"
+    label: "Viewer publishing workflow"
     note: ""
   - id: "L-0002"
     rel: supported_by
     artifact_kind: document
-    ref: "path:RUNBOOK.md"
-    label: "Site build workflow"
+    ref: "path:README.md"
+    label: "CLI viewer workflow"
     note: ""
 ---
 

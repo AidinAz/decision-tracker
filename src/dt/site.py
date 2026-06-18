@@ -352,7 +352,7 @@ def build_site(root: Path, site_dir: Path, viewer_dir: Optional[Path] = None, fo
         "    </script>"
     )
     if VIEWER_CONFIG_PLACEHOLDER not in index_html:
-        raise RuntimeError("viewer/index.html is missing the DT_VIEWER_CONFIG placeholder")
+        raise RuntimeError("viewer asset index.html is missing the DT_VIEWER_CONFIG placeholder")
     index_html = index_html.replace(VIEWER_CONFIG_PLACEHOLDER, config)
     (site_dir / "index.html").write_text(index_html, encoding="utf-8")
 

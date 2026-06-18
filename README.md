@@ -111,23 +111,18 @@ These outputs are intended for evaluation, inspection, and the read-only viewer.
 
 ## Viewer
 
-The static viewer lives in [`viewer/`](viewer/). Generate exports, serve the repository root, and open `/viewer/`:
+The static viewer is packaged with the CLI and emitted by `dt build-site`. Users do not edit or serve viewer source files directly.
 
 ```bash
 PYTHONPATH=src python3 -m dt.cli report
-python3 -m http.server 8000
+PYTHONPATH=src python3 -m dt.cli build-site --root .
+python3 -m http.server 8000 --directory _site
 ```
 
 Then visit:
 
 ```text
-http://localhost:8000/viewer/
-```
-
-Build the clean static site artifact for GitHub Pages:
-
-```bash
-PYTHONPATH=src python3 -m dt.cli build-site --root .
+http://localhost:8000/
 ```
 
 This creates `_site/` with the viewer and generated data under `_site/data/`. The GitHub Actions workflow validates and builds this artifact for pull requests, and deploys it to GitHub Pages on pushes to `main`.
@@ -239,7 +234,6 @@ PYTHONPATH=src python3 -m dt.cli report
 
 - [RUNBOOK.md](RUNBOOK.md): detailed user guide
 - [docs/user-scenarios.md](docs/user-scenarios.md): use cases and Mermaid diagrams
-- [viewer/README.md](viewer/README.md): viewer usage notes
 - [docs/](docs/): supporting notes linked from Decision Records
 - [fixtures/decisions](fixtures/decisions): sample records used by tests
 

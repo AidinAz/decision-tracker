@@ -5,14 +5,12 @@ on:
     branches: ["main"]
     paths:
       - "decisions/**"
-      - "viewer/**"
       - "src/**"
       - "tests/**"
       - "fixtures/**"
       - "docs/**"
       - "evaluation/**"
       - "schemas/**"
-      - "scripts/build_site.py"
       - "pyproject.toml"
       - "README.md"
       - "RUNBOOK.md"
@@ -20,14 +18,12 @@ on:
   pull_request:
     paths:
       - "decisions/**"
-      - "viewer/**"
       - "src/**"
       - "tests/**"
       - "fixtures/**"
       - "docs/**"
       - "evaluation/**"
       - "schemas/**"
-      - "scripts/build_site.py"
       - "pyproject.toml"
       - "README.md"
       - "RUNBOOK.md"

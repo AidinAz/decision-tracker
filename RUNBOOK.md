@@ -44,7 +44,7 @@ Those outputs are deterministic. If the input records do not change, the generat
 - [`fixtures/decisions`](fixtures/decisions): canonical sample Decision Records
 - [`fixtures/expected`](fixtures/expected): golden expected outputs
 - [`tests`](tests): regression and behavior tests
-- [`viewer/`](viewer/): static read-only viewer
+- `src/dt/assets/viewer/`: packaged viewer assets emitted by `dt build-site`
 
 ## Decision Record Model
 
@@ -753,24 +753,25 @@ diff -u fixtures/expected/report.md reports/report.md
 
 ## How to Use the Viewer
 
-The viewer is a static read-only app in [`viewer/`](viewer/). It loads the generated JSON exports and provides:
+The viewer is a static read-only app packaged with the CLI. It loads the generated JSON exports and provides:
 
 - a filterable decision list
 - a detail view with Decision Record sections
 - grouped links by relationship type
 - a traceability graph
 
-Generate exports and serve the repository root:
+Generate exports, build the static site artifact, and serve `_site/`:
 
 ```bash
 PYTHONPATH=src python3 -m dt.cli report
-python3 -m http.server 8000
+PYTHONPATH=src python3 -m dt.cli build-site --root .
+python3 -m http.server 8000 --directory _site
 ```
 
 Open:
 
 ```text
-http://localhost:8000/viewer/
+http://localhost:8000/
 ```
 
 ## How Static Publishing Works

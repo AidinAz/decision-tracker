@@ -10,7 +10,6 @@ def _prepare_site_workdir(tmp_path: Path) -> Path:
     work = tmp_path / "work"
     work.mkdir()
     shutil.copytree(repo / "src", work / "src")
-    shutil.copytree(repo / "viewer", work / "viewer")
     decisions_dir = work / "decisions"
     decisions_dir.mkdir()
     for path in (repo / "fixtures" / "decisions").glob("*.md"):
@@ -19,11 +18,10 @@ def _prepare_site_workdir(tmp_path: Path) -> Path:
 
 
 def test_build_site_creates_clean_static_artifact(tmp_path: Path):
-    repo = Path(__file__).resolve().parents[1]
     work = _prepare_site_workdir(tmp_path)
 
     result = subprocess.run(
-        [sys.executable, str(repo / "scripts" / "build_site.py"), "--root", str(work)],
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work)],
         capture_output=True,
         text=True,
     )
@@ -62,7 +60,6 @@ def test_build_site_creates_clean_static_artifact(tmp_path: Path):
 
 
 def test_build_site_refuses_unknown_non_empty_site_dir(tmp_path: Path):
-    repo = Path(__file__).resolve().parents[1]
     work = _prepare_site_workdir(tmp_path)
     site = tmp_path / "victim"
     site.mkdir()
@@ -70,7 +67,7 @@ def test_build_site_refuses_unknown_non_empty_site_dir(tmp_path: Path):
     protected.write_text("do not delete\n", encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, str(repo / "scripts" / "build_site.py"), "--root", str(work), "--site-dir", str(site)],
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work), "--site-dir", str(site)],
         capture_output=True,
         text=True,
     )
@@ -81,7 +78,6 @@ def test_build_site_refuses_unknown_non_empty_site_dir(tmp_path: Path):
 
 
 def test_build_site_force_replaces_unknown_non_empty_site_dir(tmp_path: Path):
-    repo = Path(__file__).resolve().parents[1]
     work = _prepare_site_workdir(tmp_path)
     site = tmp_path / "victim"
     site.mkdir()
@@ -91,7 +87,9 @@ def test_build_site_force_replaces_unknown_non_empty_site_dir(tmp_path: Path):
     result = subprocess.run(
         [
             sys.executable,
-            str(repo / "scripts" / "build_site.py"),
+            "-m",
+            "dt.cli",
+            "build-site",
             "--root",
             str(work),
             "--site-dir",
@@ -109,14 +107,13 @@ def test_build_site_force_replaces_unknown_non_empty_site_dir(tmp_path: Path):
 
 
 def test_build_site_stops_on_validation_failure(tmp_path: Path):
-    repo = Path(__file__).resolve().parents[1]
     work = _prepare_site_workdir(tmp_path)
     target = next((work / "decisions").glob("DR-0001-*.md"))
     text = target.read_text(encoding="utf-8")
     target.write_text(text.replace("stage: monitoring", "stage: invalid"), encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, str(repo / "scripts" / "build_site.py"), "--root", str(work)],
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work)],
         capture_output=True,
         text=True,
     )
@@ -129,7 +126,9 @@ def test_build_site_stops_on_validation_failure(tmp_path: Path):
 def test_build_site_requires_viewer_config_placeholder(tmp_path: Path):
     repo = Path(__file__).resolve().parents[1]
     work = _prepare_site_workdir(tmp_path)
-    index_path = work / "viewer" / "index.html"
+    viewer_dir = tmp_path / "custom-viewer"
+    shutil.copytree(repo / "src" / "dt" / "assets" / "viewer", viewer_dir)
+    index_path = viewer_dir / "index.html"
     index_path.write_text(
         index_path.read_text(encoding="utf-8").replace(
             "<script>\n      window.DT_VIEWER_CONFIG = window.DT_VIEWER_CONFIG || {};\n    </script>",
@@ -141,11 +140,12 @@ def test_build_site_requires_viewer_config_placeholder(tmp_path: Path):
     result = subprocess.run(
         [
             sys.executable,
-            str(repo / "scripts" / "build_site.py"),
+            "-m",
+            "dt.site",
             "--root",
             str(work),
             "--viewer-dir",
-            str(work / "viewer"),
+            str(viewer_dir),
         ],
         capture_output=True,
         text=True,
@@ -157,7 +157,6 @@ def test_build_site_requires_viewer_config_placeholder(tmp_path: Path):
 
 def test_build_site_command_uses_packaged_assets(tmp_path: Path):
     work = _prepare_site_workdir(tmp_path)
-    shutil.rmtree(work / "viewer")
 
     result = subprocess.run(
         [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work)],
