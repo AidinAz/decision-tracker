@@ -225,7 +225,7 @@ Examples of valid refs:
 - `path:docs/model-selection-notes.md`
 - `decision:DR-0004`
 
-The CLI validates refs syntactically. For `git:commit:<sha>` refs, validation also checks whether the commit exists in the local Git repository when the command is run inside one. For `path:` refs, validation warns if the local file is missing. These evidence checks are warning-only unless strict validation is enabled.
+The CLI validates refs syntactically. For `git:commit:<sha>` refs, validation also checks whether the commit exists in the local Git repository when the command is run inside one. `GIT_COMMIT_NOT_FOUND` means Git ran and the commit is absent from local history; `GIT_COMMIT_CHECK_UNAVAILABLE` means a Git repository was detected but the commit check could not complete. For `path:` refs, validation warns if the local file is missing. These evidence checks are warning-only unless strict validation is enabled.
 
 ## Commands
 
@@ -251,7 +251,7 @@ PYTHONPATH=src python3 -m dt.cli report
 PYTHONPATH=src python3 -m dt.cli build-site
 ```
 
-All commands accept `--root PATH`. If you omit it, the CLI walks upward from the current directory and uses the first directory containing `decisions/` or `.git`. This means you can run `dt validate --all` or `dt report` from a subdirectory of the repository.
+All commands accept `--root PATH`. If you omit it, the CLI walks upward from the current directory, prefers the nearest ancestor containing `decisions/`, and falls back to the nearest `.git` ancestor. This means you can run `dt validate --all` or `dt report` from a subdirectory of the repository. Use `--root` in unusual nested layouts where multiple ancestors could look like project roots.
 
 To link a new record to the current Git commit, add `--git-head`:
 

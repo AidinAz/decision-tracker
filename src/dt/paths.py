@@ -13,7 +13,10 @@ from dt.markdown import _extract_front_matter
 
 def _discover_project_root(start: Path) -> Path:
     for candidate in (start, *start.parents):
-        if (candidate / "decisions").exists() or (candidate / ".git").exists():
+        if (candidate / "decisions").exists():
+            return candidate
+    for candidate in (start, *start.parents):
+        if (candidate / ".git").exists():
             return candidate
     return start
 

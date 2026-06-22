@@ -69,7 +69,7 @@ PYTHONPATH=src python3 -m dt.cli report
 PYTHONPATH=src python3 -m dt.cli build-site
 ```
 
-All commands accept `--root PATH`. If omitted, the CLI walks upward from the current directory to find `decisions/` or `.git`, so commands also work from repository subdirectories. Run `dt init` before `dt new`; `new` refuses to create records in an uninitialized directory.
+All commands accept `--root PATH`. If omitted, the CLI walks upward from the current directory, preferring the nearest `decisions/` ancestor and then falling back to the nearest `.git` ancestor. Use `--root` in unusual nested layouts. Run `dt init` before `dt new`; `new` refuses to create records in an uninitialized directory.
 
 Use `--git-head` with `new` to add the current Git commit as a stable `git:commit:<sha>` link:
 
@@ -234,6 +234,7 @@ Validation checks:
 - template-specific required fields
 - template-specific minimum links
 - missing local Git commits for `git:commit:<sha>` refs, when validation runs inside a Git repository
+- unavailable Git commit checks, when a Git repository is detected but commit lookup cannot complete
 - missing local files for `path:` refs, as warning-only evidence checks
 - superseded cross-record consistency
 - ref format validity

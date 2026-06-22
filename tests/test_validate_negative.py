@@ -3,8 +3,10 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
-from dt.git import _git_commit_exists
+from dt.cli import app
+from dt.git import GitCommitCheck
 from dt.validation import _yaml_valid
 
 
@@ -996,13 +998,48 @@ def test_validate_skips_git_commit_check_outside_git_repo(tmp_path: Path):
     assert "OK DR-0001" in result.stdout
 
 
-def test_git_commit_exists_returns_false_when_git_execution_fails(monkeypatch, tmp_path: Path):
-    def raise_file_not_found(*_args, **_kwargs):
-        raise FileNotFoundError("git")
+def test_validate_warns_when_git_commit_check_is_unavailable(monkeypatch, tmp_path: Path):
+    work = tmp_path / "work"
+    work.mkdir()
+    decisions_dir = work / "decisions"
+    decisions_dir.mkdir()
+    path = decisions_dir / "DR-0001-git-link.md"
+    path.write_text(
+        "---\n"
+        "id: DR-0001\n"
+        "title: Git linked decision\n"
+        "status: accepted\n"
+        "type: generic\n"
+        "stage: training\n"
+        "date: '2026-03-14'\n"
+        "owner: ahmet\n"
+        "stakeholders: [reviewer]\n"
+        "template_version: '1.0'\n"
+        "links:\n"
+        "  - id: L-0001\n"
+        "    rel: implements\n"
+        "    artifact_kind: code\n"
+        "    ref: git:commit:deadbeef\n"
+        "---\n"
+        "\n"
+        "## Context\nx\n\n## Decision\nx\n\n## Rationale\nx\n\n## Alternatives\nN/A\n\n## Consequences\nx\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("dt.commands._git_repo_root", lambda _root: work)
+    monkeypatch.setattr(
+        "dt.validation._git_commit_check",
+        lambda _root, _sha: GitCommitCheck("unavailable", "git executable was not found"),
+    )
+    runner = CliRunner()
 
-    monkeypatch.setattr("dt.git.subprocess.run", raise_file_not_found)
+    result = runner.invoke(app, ["validate", "--all", "--root", str(work)])
+    strict = runner.invoke(app, ["validate", "--all", "--strict", "--root", str(work)])
 
-    assert _git_commit_exists(tmp_path, "deadbeef") is False
+    assert result.exit_code == 0
+    assert "WARN DR-0001: GIT_COMMIT_CHECK_UNAVAILABLE" in result.output
+    assert "git executable was not found" in result.output
+    assert "GIT_COMMIT_NOT_FOUND" not in result.output
+    assert strict.exit_code == 3
 
 
 def test_validate_missing_decisions_dir_is_filesystem_error(tmp_path: Path):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -10,6 +11,12 @@ from dt.models import DiscoverCandidate
 
 class GitLogError(RuntimeError):
     """Raised when discover cannot inspect local Git history."""
+
+
+@dataclass(frozen=True)
+class GitCommitCheck:
+    status: str
+    detail: str = ""
 
 
 def _keyword_matches(message: str, keywords: list[str]) -> bool:
@@ -54,7 +61,7 @@ def _resolve_git_head(root: Path) -> str:
     return result.stdout.strip()
 
 
-def _git_commit_exists(root: Path, sha: str) -> bool:
+def _git_commit_check(root: Path, sha: str) -> GitCommitCheck:
     try:
         result = subprocess.run(
             ["git", "-C", str(root), "cat-file", "-e", f"{sha}^{{commit}}"],
@@ -63,9 +70,24 @@ def _git_commit_exists(root: Path, sha: str) -> bool:
             timeout=5,
             check=False,
         )
-    except (FileNotFoundError, subprocess.SubprocessError):
-        return False
-    return result.returncode == 0
+    except FileNotFoundError:
+        return GitCommitCheck("unavailable", "git executable was not found")
+    except subprocess.TimeoutExpired:
+        return GitCommitCheck("unavailable", "git commit check timed out")
+    except subprocess.SubprocessError:
+        return GitCommitCheck("unavailable", "git command failed while checking commit")
+    if result.returncode == 0:
+        return GitCommitCheck("exists")
+    stderr = result.stderr.strip()
+    missing_markers = ("not a valid object name", "could not get object info", "bad object")
+    if result.returncode == 1 or any(marker in stderr.lower() for marker in missing_markers):
+        return GitCommitCheck("missing")
+    detail = stderr or "git command failed while checking commit"
+    return GitCommitCheck("unavailable", detail)
+
+
+def _git_commit_exists(root: Path, sha: str) -> bool:
+    return _git_commit_check(root, sha).status == "exists"
 
 
 def _infer_discover_stage(message: str) -> str:

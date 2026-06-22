@@ -19,7 +19,7 @@ from dt.constants import (
     STATUSES,
     TYPES,
 )
-from dt.git import _git_commit_exists
+from dt.git import _git_commit_check
 from dt.markdown import _extract_front_matter, _heading_counts, _parse_headings
 from dt.models import LoadedRecord, ValidationContext, ValidationMessage
 from dt.refs import _ref_is_valid
@@ -396,9 +396,18 @@ def _git_commit_warnings(valid_links: list[dict[str, Any]], git_root: Optional[P
         if sha in checked:
             continue
         checked.add(sha)
-        if not _git_commit_exists(git_root, sha):
+        check = _git_commit_check(git_root, sha)
+        if check.status == "missing":
             warnings.append(
                 ValidationMessage("GIT_COMMIT_NOT_FOUND", f"Referenced commit is not in local Git history: {sha}")
+            )
+        elif check.status == "unavailable":
+            detail = f" ({check.detail})" if check.detail else ""
+            warnings.append(
+                ValidationMessage(
+                    "GIT_COMMIT_CHECK_UNAVAILABLE",
+                    f"Could not check referenced Git commit{detail}: {sha}",
+                )
             )
     return warnings
 
