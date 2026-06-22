@@ -89,6 +89,16 @@ h1 {
   padding: 7px 10px;
 }
 
+.reconstruction-pill {
+  border-color: rgba(139, 107, 36, 0.45);
+  color: var(--run);
+}
+
+.review-pill {
+  border-color: rgba(31, 111, 104, 0.42);
+  color: var(--accent);
+}
+
 .site-links {
   position: relative;
   display: flex;
@@ -627,7 +637,8 @@ h1 {
   border-bottom: 1px solid var(--line);
 }
 
-.reconstruction-panel {
+.reconstruction-panel,
+.review-panel {
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -637,41 +648,56 @@ h1 {
   padding: 16px;
 }
 
-.reconstruction-panel h3 {
+.review-panel {
+  border-color: rgba(31, 111, 104, 0.28);
+  background: rgba(31, 111, 104, 0.07);
+}
+
+.reconstruction-panel h3,
+.review-panel h3 {
   font: 900 13px/1.2 ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .reconstruction-panel p,
-.reconstruction-panel li {
+.reconstruction-panel li,
+.review-panel p {
   margin: 6px 0 0;
   color: var(--muted);
   font: 600 13px/1.45 ui-sans-serif, system-ui, sans-serif;
 }
 
-.reconstruction-panel dl {
+.reconstruction-panel dl,
+.review-panel dl {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
 }
 
-.reconstruction-panel dl div {
+.review-panel dl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reconstruction-panel dl div,
+.review-panel dl div {
   border: 1px solid rgba(218, 213, 200, 0.8);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.68);
   padding: 10px;
 }
 
-.reconstruction-panel dt {
+.reconstruction-panel dt,
+.review-panel dt {
   color: var(--muted);
   font: 800 10px/1.2 ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.reconstruction-panel dd {
+.reconstruction-panel dd,
+.review-panel dd {
   margin: 5px 0 0;
   color: var(--ink);
   font: 900 13px/1.25 ui-sans-serif, system-ui, sans-serif;
@@ -768,10 +794,11 @@ h1 {
 
 .graph-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 
 .focus-toggle {
@@ -789,6 +816,26 @@ h1 {
 
 .focus-toggle input {
   accent-color: var(--accent);
+}
+
+.graph-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  padding: 6px 10px;
+  font: 800 12px/1 ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.graph-filter select {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
 }
 
 .graph-legend {
@@ -890,6 +937,19 @@ h1 {
   stroke: rgba(34, 33, 29, 0.28);
   stroke-width: 2;
   transition: opacity 160ms ease;
+}
+
+.stage-lane rect {
+  fill: rgba(31, 111, 104, 0.055);
+  stroke: rgba(31, 111, 104, 0.16);
+  stroke-dasharray: 4 4;
+}
+
+.stage-lane text {
+  fill: var(--accent);
+  font: 900 11px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .node rect {
@@ -1038,7 +1098,8 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .reconstruction-panel dl {
+  .reconstruction-panel dl,
+  .review-panel dl {
     grid-template-columns: 1fr;
   }
 

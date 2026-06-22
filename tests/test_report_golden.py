@@ -35,6 +35,10 @@ def test_report_matches_golden(tmp_path: Path):
     for expected, actual in pairs:
         assert actual.exists(), f"Missing output: {actual}"
         assert expected.read_bytes() == actual.read_bytes(), f"Mismatch in {actual.name}"
+    report_text = (reports_dir / "report.md").read_text(encoding="utf-8")
+    assert "## Executive summary" in report_text
+    assert "## Attention items" in report_text
+    assert "## Reconstructed records" in report_text
 
 
 def test_report_is_deterministic_across_runs(tmp_path: Path):

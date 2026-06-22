@@ -1,9 +1,12 @@
 const state = {
   artifacts: new Map(),
   decisions: [],
+  edgeRelFilter: "",
   focusSelected: false,
   graph: { edges: [], nodes: [] },
+  groupByStage: true,
   selectedId: null,
+  showArtifacts: true,
 };
 
 const config = {
@@ -18,7 +21,9 @@ const els = {
   decisionList: document.querySelector("#decision-list"),
   detailContent: document.querySelector("#detail-content"),
   detailEmpty: document.querySelector("#detail-empty"),
+  edgeRelFilter: document.querySelector("#edge-rel-filter"),
   focusSelected: document.querySelector("#focus-selected"),
+  groupByStage: document.querySelector("#group-by-stage"),
   graphCanvas: document.querySelector("#graph-canvas"),
   graphFocus: document.querySelector("#graph-focus"),
   linkSummary: document.querySelector("#summary-links"),
@@ -27,6 +32,7 @@ const els = {
   siteCommit: document.querySelector("#site-commit"),
   stageFilter: document.querySelector("#stage-filter"),
   statusFilter: document.querySelector("#status-filter"),
+  showArtifacts: document.querySelector("#show-artifacts"),
   totalSummary: document.querySelector("#summary-total"),
   traceTable: document.querySelector("#trace-table"),
   typeFilter: document.querySelector("#type-filter"),
@@ -39,6 +45,8 @@ const els = {
 
 const sectionOrder = ["Context", "Decision", "Rationale", "Alternatives", "Consequences"];
 const relOrder = ["implements", "evaluated_by", "supported_by", "supersedes"];
+const stageOrder = ["data", "training", "evaluation", "deployment", "monitoring"];
+const artifactKindOrder = ["code", "data", "experiment_run", "document", "issue"];
 const relClass = {
   evaluated_by: "rel-evaluated_by",
   implements: "rel-implements",
@@ -121,6 +129,10 @@ function reconstructionPill(decision) {
   return decision.reconstruction ? `<span class="pill reconstruction-pill">reconstructed</span>` : "";
 }
 
+function reviewPill(decision) {
+  return decision.review?.status ? `<span class="pill review-pill">review: ${escapeHtml(decision.review.status)}</span>` : "";
+}
+
 function renderReconstructionPanel(decision) {
   const reconstruction = decision.reconstruction;
   if (!reconstruction) return "";
@@ -143,6 +155,23 @@ function renderReconstructionPanel(decision) {
           ? `<ul>${knownGaps.map((gap) => `<li>${escapeHtml(gap)}</li>`).join("")}</ul>`
           : `<p>No known gaps recorded.</p>`
       }
+    </section>
+  `;
+}
+
+function renderReviewPanel(decision) {
+  const review = decision.review;
+  if (!review) return "";
+  const reviewers = Array.isArray(review.reviewed_by) ? review.reviewed_by : [];
+  return `
+    <section class="review-panel">
+      <h3>Review</h3>
+      <dl>
+        <div><dt>Status</dt><dd>${escapeHtml(review.status || "unknown")}</dd></div>
+        <div><dt>Reviewed date</dt><dd>${escapeHtml(review.reviewed_date || "unknown")}</dd></div>
+        <div><dt>Reviewers</dt><dd>${escapeHtml(reviewers.join(", ") || "none")}</dd></div>
+      </dl>
+      ${review.notes ? `<p>${escapeHtml(review.notes)}</p>` : ""}
     </section>
   `;
 }
@@ -193,6 +222,7 @@ function renderList() {
             <span class="pill">${escapeHtml(decision.type)}</span>
             <span class="pill">${escapeHtml(decision.stage)}</span>
             ${reconstructionPill(decision)}
+            ${reviewPill(decision)}
             <span class="pill">${decision.link_count} links</span>
           </span>
           <span class="score-row">
@@ -231,12 +261,14 @@ function renderDetail(decision) {
         <span class="pill">${escapeHtml(decision.date)}</span>
         <span class="pill">owner: ${escapeHtml(decision.owner)}</span>
         ${reconstructionPill(decision)}
+        ${reviewPill(decision)}
       </div>
       <div class="meta-row">
         ${decision.stakeholders.map((item) => `<span class="pill">${escapeHtml(item)}</span>`).join("")}
       </div>
     </header>
     ${renderReconstructionPanel(decision)}
+    ${renderReviewPanel(decision)}
     <div class="section-stack">
       ${sectionOrder
         .map(
@@ -403,30 +435,77 @@ function renderValidationWarnings(validationText) {
 }
 
 function renderGraph() {
-  const width = 1120;
+  const width = 1220;
   const decisionNodes = state.graph.nodes.filter((node) => node.kind === "decision");
-  const artifactNodes = state.graph.nodes.filter((node) => node.kind === "artifact");
+  const artifactNodes = state.showArtifacts ? state.graph.nodes.filter((node) => node.kind === "artifact") : [];
   const rowGap = 62;
   const artifactGap = 54;
-  const height = Math.max(430, 72 + Math.max(decisionNodes.length * rowGap, artifactNodes.length * artifactGap));
+  const stageGroups = new Map(stageOrder.map((stage) => [stage, []]));
+  decisionNodes.forEach((node) => {
+    const decision = state.decisions.find((item) => decisionNodeId(item) === node.id);
+    const stage = decision?.stage || "other";
+    if (!stageGroups.has(stage)) stageGroups.set(stage, []);
+    stageGroups.get(stage).push(node);
+  });
+  const artifactGroups = new Map(artifactKindOrder.map((kind) => [kind, []]));
+  artifactNodes.forEach((node) => {
+    const artifact = state.artifacts.get(node.id);
+    const kind = artifact?.artifact_kind || "other";
+    if (!artifactGroups.has(kind)) artifactGroups.set(kind, []);
+    artifactGroups.get(kind).push(node);
+  });
+  const decisionHeight = state.groupByStage
+    ? [...stageGroups.values()].reduce((total, nodes) => total + 38 + Math.max(1, nodes.length) * rowGap, 0)
+    : decisionNodes.length * rowGap;
+  const artifactHeight = [...artifactGroups.values()].reduce((total, nodes) => total + (nodes.length ? 32 + nodes.length * artifactGap : 0), 0);
+  const height = Math.max(430, 78 + Math.max(decisionHeight, artifactHeight));
   const positions = new Map();
+  const lanes = [];
 
-  decisionNodes.forEach((node, index) => {
-    positions.set(node.id, { x: 70, y: 34 + index * rowGap });
-  });
-  artifactNodes.forEach((node, index) => {
-    positions.set(node.id, { x: 720, y: 26 + index * artifactGap });
-  });
+  if (state.groupByStage) {
+    let y = 34;
+    for (const [stage, nodes] of stageGroups) {
+      if (!nodes.length) continue;
+      const laneHeight = Math.max(1, nodes.length) * rowGap + 22;
+      lanes.push({ label: stage, x: 42, y: y - 18, width: 330, height: laneHeight });
+      nodes.forEach((node, index) => {
+        positions.set(node.id, { x: 70, y: y + index * rowGap });
+      });
+      y += laneHeight + 24;
+    }
+  } else {
+    decisionNodes.forEach((node, index) => {
+      positions.set(node.id, { x: 70, y: 34 + index * rowGap });
+    });
+  }
+  let artifactY = 26;
+  for (const [kind, nodes] of artifactGroups) {
+    if (!nodes.length) continue;
+    artifactY += 16;
+    nodes.forEach((node, index) => {
+      positions.set(node.id, { x: 820, y: artifactY + index * artifactGap });
+    });
+    artifactY += nodes.length * artifactGap + 24;
+  }
 
   const activeNodeId = state.selectedId ? `decision:${state.selectedId}` : "";
   const activeTargets = new Set(
-    state.graph.edges.filter((edge) => edge.source === activeNodeId).map((edge) => edge.target),
+    state.graph.edges
+      .filter((edge) => edge.source === activeNodeId)
+      .filter((edge) => !state.edgeRelFilter || edge.rel === state.edgeRelFilter)
+      .map((edge) => edge.target),
   );
   const visibleIds = activeGraphIds(activeNodeId, activeTargets);
 
   const edgeLabelCounts = new Map();
   const edges = state.graph.edges
     .map((edge, index) => {
+      if (state.edgeRelFilter && edge.rel !== state.edgeRelFilter) {
+        return "";
+      }
+      if (!state.showArtifacts && String(edge.target).startsWith("artifact:")) {
+        return "";
+      }
       if (visibleIds && (!visibleIds.has(edge.source) || !visibleIds.has(edge.target))) {
         return "";
       }
@@ -442,7 +521,7 @@ function renderGraph() {
       const labelX = (source.x + target.x) / 2 + 82;
       const labelY = (source.y + target.y) / 2 + 13 + labelOffset;
       return `
-        <path class="edge ${relName}" d="M ${source.x + 260} ${source.y + 18} C ${source.x + 420} ${source.y + 18}, ${target.x - 160} ${target.y + 18}, ${target.x} ${target.y + 18}" opacity="${active ? "1" : "0.16"}">
+        <path class="edge ${relName}" d="M ${source.x + 260} ${source.y + 18} C ${source.x + 430} ${source.y + 18}, ${target.x - 170} ${target.y + 18}, ${target.x} ${target.y + 18}" opacity="${active ? "1" : "0.16"}">
           <title>${escapeHtml(edge.rel)} · ${escapeHtml(edge.label || edge.target)}</title>
         </path>
         <text class="edge-label ${active ? "is-visible" : ""}" x="${labelX}" y="${labelY}">${escapeHtml(edge.rel)}</text>
@@ -471,16 +550,27 @@ function renderGraph() {
       `;
     })
     .join("");
+  const laneMarkup = lanes
+    .map(
+      (lane) => `
+        <g class="stage-lane">
+          <rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="12"></rect>
+          <text x="${lane.x + 12}" y="${lane.y + 22}">${escapeHtml(lane.label)}</text>
+        </g>
+      `,
+    )
+    .join("");
 
   els.graphCanvas.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" style="height: ${height}px" role="img" aria-label="Decision traceability graph">
+      ${laneMarkup}
       ${edges}
       ${nodes}
     </svg>
   `;
   els.graphFocus.textContent = state.selectedId
-    ? `${state.focusSelected ? "Showing only" : "Focused on"} decision:${state.selectedId}`
-    : "All decision and artifact links";
+    ? `${state.focusSelected ? "Showing only" : "Focused on"} decision:${state.selectedId}${state.edgeRelFilter ? ` · ${state.edgeRelFilter}` : ""}`
+    : `${state.edgeRelFilter ? state.edgeRelFilter : "All"} decision and artifact links`;
 }
 
 function selectDecision(id) {
@@ -499,6 +589,18 @@ function bindEvents() {
 
   els.focusSelected.addEventListener("change", () => {
     state.focusSelected = els.focusSelected.checked;
+    renderGraph();
+  });
+  els.showArtifacts.addEventListener("change", () => {
+    state.showArtifacts = els.showArtifacts.checked;
+    renderGraph();
+  });
+  els.groupByStage.addEventListener("change", () => {
+    state.groupByStage = els.groupByStage.checked;
+    renderGraph();
+  });
+  els.edgeRelFilter.addEventListener("change", () => {
+    state.edgeRelFilter = els.edgeRelFilter.value;
     renderGraph();
   });
 

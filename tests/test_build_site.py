@@ -56,6 +56,13 @@ def test_build_site_creates_clean_static_artifact(tmp_path: Path):
     assert "Executive Summary" in report_html
     assert "Print report" in report_html
     assert "data/metrics.csv" in report_html
+    index_html = (site / "index.html").read_text(encoding="utf-8")
+    assert 'id="show-artifacts"' in index_html
+    assert 'id="group-by-stage"' in index_html
+    assert 'id="edge-rel-filter"' in index_html
+    app_js = (site / "app.js").read_text(encoding="utf-8")
+    assert "stage-lane" in app_js
+    assert "review-panel" in app_js
     assert "OK DR-0001" in (data / "validation.txt").read_text(encoding="utf-8")
 
     meta = json.loads((data / "site-meta.json").read_text(encoding="utf-8"))
@@ -108,6 +115,47 @@ def test_build_site_report_surfaces_reconstructed_records(tmp_path: Path):
     assert "Backfilled threshold" in report_html
     assert "reconstruction-panel" in app_js
     assert "reconstructed" in app_js
+
+
+def test_build_site_surfaces_review_metadata(tmp_path: Path):
+    work = _prepare_site_workdir(tmp_path)
+    reviewed = work / "decisions" / "DR-0007-reviewed.md"
+    reviewed.write_text(
+        "---\n"
+        "id: DR-0007\n"
+        "title: Reviewed decision\n"
+        "status: proposed\n"
+        "type: generic\n"
+        "stage: monitoring\n"
+        "date: '2026-03-14'\n"
+        "owner: ahmet\n"
+        "stakeholders: [reviewer]\n"
+        "template_version: '1.0'\n"
+        "links: []\n"
+        "review:\n"
+        "  status: reviewed\n"
+        "  reviewed_by: [advisor]\n"
+        "  reviewed_date: '2026-03-15'\n"
+        "  notes: Checked in meeting\n"
+        "---\n"
+        "\n"
+        "## Context\nx\n\n## Decision\nx\n\n## Rationale\nx\n\n## Alternatives\nx\n\n## Consequences\nx\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-m", "dt.cli", "build-site", "--root", str(work)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    index = json.loads((work / "_site" / "data" / "index.json").read_text(encoding="utf-8"))
+    reviewed_entry = next(item for item in index if item["id"] == "DR-0007")
+    assert reviewed_entry["review"]["status"] == "reviewed"
+    report_html = (work / "_site" / "report.html").read_text(encoding="utf-8")
+    assert "Review Status" in report_html
+    assert "reviewed" in report_html
 
 
 def test_build_site_refuses_unknown_non_empty_site_dir(tmp_path: Path):

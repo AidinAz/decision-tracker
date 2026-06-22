@@ -74,6 +74,24 @@
             <input id="focus-selected" type="checkbox" />
             Focus selected
           </label>
+          <label class="focus-toggle">
+            <input id="show-artifacts" type="checkbox" checked />
+            Show artifacts
+          </label>
+          <label class="focus-toggle">
+            <input id="group-by-stage" type="checkbox" checked />
+            Group by stage
+          </label>
+          <label class="graph-filter">
+            Relationship
+            <select id="edge-rel-filter">
+              <option value="">All</option>
+              <option value="implements">implements</option>
+              <option value="supported_by">supported_by</option>
+              <option value="evaluated_by">evaluated_by</option>
+              <option value="supersedes">supersedes</option>
+            </select>
+          </label>
         </div>
         <div class="graph-legend" aria-label="Graph legend">
           <div>

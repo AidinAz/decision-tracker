@@ -165,7 +165,7 @@ def generate_report(root: Path) -> None:
 
     has_validation_failures = False
     for record in loaded_records:
-        errors, warnings, _ = _validation_messages(record, context, git_root)
+        errors, warnings, _ = _validation_messages(record, context, git_root, root)
         record_id = record.yaml_id or "UNKNOWN"
         for error in errors:
             has_validation_failures = True
@@ -195,6 +195,8 @@ def generate_report(root: Path) -> None:
     smell_alternatives_na = 0
     smell_weak_trace = 0
     smell_no_evidence = 0
+    reconstructed_records: list[dict[str, Any]] = []
+    review_counts: dict[str, int] = {}
 
     for decision in decisions:
         doc = decision.raw
@@ -208,6 +210,18 @@ def generate_report(root: Path) -> None:
         stage_counts[stage] = stage_counts.get(stage, 0) + 1
         type_counts[decision_type] = type_counts.get(decision_type, 0) + 1
         status_counts[status] = status_counts.get(status, 0) + 1
+        if isinstance(doc.get("reconstruction"), dict):
+            reconstructed_records.append(
+                {
+                    "id": decision_id,
+                    "title": str(doc["title"]),
+                    "confidence": str(doc["reconstruction"].get("evidence_confidence", "")),
+                    "known_gaps": len(doc["reconstruction"].get("known_gaps", []) or []),
+                }
+            )
+        if isinstance(doc.get("review"), dict):
+            review_status = str(doc["review"].get("status", ""))
+            review_counts[review_status] = review_counts.get(review_status, 0) + 1
 
         has_context = 1 if _is_non_empty_section(decision.headings.get("Context")) else 0
         has_decision = 1 if _is_non_empty_section(decision.headings.get("Decision")) else 0
@@ -283,6 +297,8 @@ def generate_report(root: Path) -> None:
         }
         if isinstance(doc.get("reconstruction"), dict):
             index_entry["reconstruction"] = doc["reconstruction"]
+        if isinstance(doc.get("review"), dict):
+            index_entry["review"] = doc["review"]
         index_payload.append(index_entry)
 
         csv_rows.append(
@@ -381,8 +397,25 @@ def generate_report(root: Path) -> None:
     avg_inclusiveness = _round3(sum(item.score_inclusiveness for item in decisions) / total) if total else 0.0
     avg_traceability = _round3(sum(item.score_traceability for item in decisions) / total) if total else 0.0
 
+    attention_rows = sorted(
+        csv_rows,
+        key=lambda row: (
+            float(row["score_traceability"]),
+            int(row["link_total"]),
+            str(row["decision_id"]),
+        ),
+    )[:5]
+
     report_lines = [
         "# Decision Tracker Report",
+        "## Executive summary",
+        f"- total decisions: {total}",
+        f"- total trace links: {sum(int(row['link_total']) for row in csv_rows)}",
+        f"- accepted decisions: {status_counts.get('accepted', 0)}",
+        f"- proposed decisions: {status_counts.get('proposed', 0)}",
+        f"- superseded decisions: {status_counts.get('superseded', 0)}",
+        f"- weak traceability records: {smell_weak_trace}",
+        "",
         "## Counts",
         f"- total decisions: {total}",
         "- by stage:",
@@ -408,8 +441,31 @@ def generate_report(root: Path) -> None:
             f"- S2 Alternatives N/A: {smell_alternatives_na}",
             f"- S3 Weak traceability: {smell_weak_trace}",
             f"- S4 No evidence link: {smell_no_evidence}",
+            "",
+            "## Attention items",
         ]
     )
+    if attention_rows:
+        for row in attention_rows:
+            report_lines.append(
+                f"- {row['decision_id']}: {row['title']} "
+                f"(status={row['status']}, links={row['link_total']}, traceability={row['score_traceability']})"
+            )
+    else:
+        report_lines.append("- none")
+    report_lines.extend(["", "## Reconstructed records"])
+    if reconstructed_records:
+        for record in sorted(reconstructed_records, key=lambda item: str(item["id"])):
+            report_lines.append(
+                f"- {record['id']}: {record['title']} "
+                f"(confidence={record['confidence']}, known_gaps={record['known_gaps']})"
+            )
+    else:
+        report_lines.append("- none")
+    if review_counts:
+        report_lines.extend(["", "## Review status"])
+        for key in sorted(review_counts):
+            report_lines.append(f"- {key}: {review_counts[key]}")
 
     report_path = root / "reports" / "report.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)

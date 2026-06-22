@@ -141,6 +141,25 @@ def _render_reconstruction_audit(decisions: list[dict[str, object]]) -> str:
     )
 
 
+def _render_review_audit(decisions: list[dict[str, object]]) -> str:
+    counts: dict[str, int] = {}
+    for decision in decisions:
+        review = decision.get("review")
+        if not isinstance(review, dict):
+            continue
+        status = str(review.get("status", ""))
+        counts[status] = counts.get(status, 0) + 1
+    if not counts:
+        return ""
+    return (
+        '<section class="report-section">'
+        "<h2>Review Status</h2>"
+        "<p>Optional review metadata summarizes human audit state when records provide it.</p>"
+        f"{_render_count_items(dict(sorted(counts.items())))}"
+        "</section>\n"
+    )
+
+
 def _render_score_card(name: str, value: float, note: str) -> str:
     percent = max(0, min(100, int(round(value * 100))))
     return (
@@ -175,6 +194,7 @@ def _render_report_html(
     }
     warnings = _warning_lines(validation_output)
     reconstruction_audit = _render_reconstruction_audit(decisions)
+    review_audit = _render_review_audit(decisions)
 
     avg_scores = {
         "Completeness": _average_score(decisions, "completeness"),
@@ -298,6 +318,7 @@ def _render_report_html(
         "          </table></div>\n"
         "        </section>\n"
         f"{reconstruction_audit}"
+        f"{review_audit}"
         '        <section class="report-section audit-grid">\n'
         '          <article class="audit-panel">\n'
         "            <h2>Validation Notes</h2>\n"
