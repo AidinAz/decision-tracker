@@ -497,7 +497,11 @@ h1 {
 
 .browser {
   grid-area: browser;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   min-height: 620px;
+  max-height: calc(100vh - 170px);
 }
 
 .detail {
@@ -539,8 +543,11 @@ h1 {
 
 .decision-list {
   display: grid;
+  align-content: start;
   gap: 10px;
-  max-height: 560px;
+  flex: 1;
+  min-height: 560px;
+  max-height: none;
   overflow: auto;
   padding: 14px;
 }

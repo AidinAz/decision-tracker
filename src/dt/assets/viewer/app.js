@@ -440,6 +440,7 @@ function renderGraph() {
   const artifactNodes = state.showArtifacts ? state.graph.nodes.filter((node) => node.kind === "artifact") : [];
   const rowGap = 62;
   const artifactGap = 54;
+  const laneHeader = 34;
   const stageGroups = new Map(stageOrder.map((stage) => [stage, []]));
   decisionNodes.forEach((node) => {
     const decision = state.decisions.find((item) => decisionNodeId(item) === node.id);
@@ -455,7 +456,7 @@ function renderGraph() {
     artifactGroups.get(kind).push(node);
   });
   const decisionHeight = state.groupByStage
-    ? [...stageGroups.values()].reduce((total, nodes) => total + 38 + Math.max(1, nodes.length) * rowGap, 0)
+    ? [...stageGroups.values()].reduce((total, nodes) => total + laneHeader + Math.max(1, nodes.length) * rowGap + 22, 0)
     : decisionNodes.length * rowGap;
   const artifactHeight = [...artifactGroups.values()].reduce((total, nodes) => total + (nodes.length ? 32 + nodes.length * artifactGap : 0), 0);
   const height = Math.max(430, 78 + Math.max(decisionHeight, artifactHeight));
@@ -466,10 +467,10 @@ function renderGraph() {
     let y = 34;
     for (const [stage, nodes] of stageGroups) {
       if (!nodes.length) continue;
-      const laneHeight = Math.max(1, nodes.length) * rowGap + 22;
+      const laneHeight = laneHeader + Math.max(1, nodes.length) * rowGap + 14;
       lanes.push({ label: stage, x: 42, y: y - 18, width: 330, height: laneHeight });
       nodes.forEach((node, index) => {
-        positions.set(node.id, { x: 70, y: y + index * rowGap });
+        positions.set(node.id, { x: 70, y: y + laneHeader + index * rowGap });
       });
       y += laneHeight + 24;
     }
@@ -555,7 +556,7 @@ function renderGraph() {
       (lane) => `
         <g class="stage-lane">
           <rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="12"></rect>
-          <text x="${lane.x + 12}" y="${lane.y + 22}">${escapeHtml(lane.label)}</text>
+          <text x="${lane.x + 14}" y="${lane.y + 22}">${escapeHtml(lane.label)}</text>
         </g>
       `,
     )
