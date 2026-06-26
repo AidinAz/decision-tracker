@@ -26,6 +26,7 @@ DISCOVER_KEYWORDS = (
     "hyperparameter",
 )
 RECONSTRUCTION_CONFIDENCE = {"low", "medium", "high"}
+GIT_SUBPROCESS_TIMEOUT = 5
 
 REF_PATTERNS = [
     re.compile(r"^git:commit:[A-Za-z0-9]+$"),

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from dt.constants import GIT_SUBPROCESS_TIMEOUT
 from dt.models import DiscoverCandidate
 
 
@@ -32,7 +33,7 @@ def _git_repo_root(root: Path) -> Optional[Path]:
             ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=GIT_SUBPROCESS_TIMEOUT,
             check=False,
         )
     except (FileNotFoundError, subprocess.SubprocessError):
@@ -48,7 +49,7 @@ def _resolve_git_head(root: Path) -> str:
             ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=GIT_SUBPROCESS_TIMEOUT,
             check=False,
         )
     except FileNotFoundError as exc:
@@ -67,7 +68,7 @@ def _git_commit_check(root: Path, sha: str) -> GitCommitCheck:
             ["git", "-C", str(root), "cat-file", "-e", f"{sha}^{{commit}}"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=GIT_SUBPROCESS_TIMEOUT,
             check=False,
         )
     except FileNotFoundError:
@@ -117,7 +118,7 @@ def _git_log_candidates(root: Path, keywords: list[str], since: Optional[str], l
     if since:
         command.append(f"--since={since}")
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=GIT_SUBPROCESS_TIMEOUT, check=False)
     except FileNotFoundError as exc:
         raise GitLogError("git executable was not found") from exc
     except subprocess.SubprocessError as exc:

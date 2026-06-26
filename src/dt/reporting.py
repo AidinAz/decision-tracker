@@ -67,7 +67,7 @@ def _build_decision(path: Path) -> DecisionComputed:
             non_empty_core += 1
 
     structure_score = 1 if all(has_map[heading] == 1 for heading in REQUIRED_HEADINGS) else 0
-    content_score = non_empty_core / 4
+    content_score = non_empty_core / len(CORE_HEADINGS)
     yaml_score = 1 if valid_yaml else 0
     score_completeness = _round3(0.2 * structure_score + 0.6 * content_score + 0.2 * yaml_score)
 
