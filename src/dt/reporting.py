@@ -13,16 +13,8 @@ from dt.markdown import _extract_front_matter, _parse_headings
 from dt.models import DecisionComputed
 from dt.paths import _json_dump
 from dt.refs import _infer_target_id, _ref_is_valid
-from dt.utils import _is_non_empty_section, _is_non_empty_string, _round3, _stable_stakeholders
+from dt.utils import _is_non_empty_section, _is_non_empty_string, _record_file_suffix, _round3, _stable_stakeholders
 from dt.validation import _load_record, _validation_context, _validation_messages, _yaml_valid
-
-
-def _record_file_suffix(record_path: Path, root: Path) -> str:
-    try:
-        display = record_path.relative_to(root).as_posix()
-    except ValueError:
-        display = record_path.as_posix()
-    return f" [file: {display}]"
 
 
 def _clean_stale_outputs(root: Path) -> None:

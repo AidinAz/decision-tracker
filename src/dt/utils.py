@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
 from typing import Any, Optional
 
 
@@ -64,3 +65,11 @@ def _parse_list_text(raw: str, separator: str = ",") -> list[str]:
             seen.add(key)
             values.append(clean)
     return values
+
+
+def _record_file_suffix(record_path: Path, root: Path) -> str:
+    try:
+        display = record_path.relative_to(root).as_posix()
+    except ValueError:
+        display = record_path.as_posix()
+    return f" [file: {display}]"

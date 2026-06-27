@@ -20,7 +20,7 @@ from dt.reporting import generate_report
 from dt.scaffold import GITIGNORE_END, GITIGNORE_START, initialize_project
 from dt.site import build_site as build_static_site
 from dt.templates import _template_payload
-from dt.utils import _parse_list_text, _parse_stakeholders_csv
+from dt.utils import _parse_list_text, _parse_stakeholders_csv, _record_file_suffix
 from dt.validation import _load_record, _validate_original_decision_date, _validation_context, _validation_messages
 
 
@@ -44,14 +44,6 @@ def build_site_command_handler(root: Optional[Path], site_dir: Optional[Path], f
 
 def report_command(root: Optional[Path]) -> None:
     generate_report(_resolve_root(root))
-
-
-def _record_file_suffix(record_path: Path, root: Path) -> str:
-    try:
-        display = record_path.relative_to(root).as_posix()
-    except ValueError:
-        display = record_path.as_posix()
-    return f" [file: {display}]"
 
 
 def discover_command(root: Optional[Path], since: Optional[str], limit: int, keywords: str) -> None:
